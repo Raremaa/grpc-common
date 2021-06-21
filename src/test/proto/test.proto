@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option java_package = "com.masaiqi.grpc";
+option java_multiple_files = true;
+import "google/protobuf/empty.proto";
+
+// 通用异常处理信息
+message Test {
+  string name = 1;
+
+}
+
+service TestServant {
+  rpc doTest (Test) returns (google.protobuf.Empty);
+}
