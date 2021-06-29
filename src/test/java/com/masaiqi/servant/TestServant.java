@@ -13,13 +13,14 @@ import io.grpc.stub.StreamObserver;
  */
 public class TestServant extends TestServantGrpc.TestServantImplBase {
 
+    public final String errorCode = "9999-1";
+
     @Override
     public void doTest(Test request, StreamObserver<Empty> responseObserver) {
         StreamObserverDelegate<Test, Empty> delegate = new StreamObserverDelegate<>(responseObserver);
         delegate.executeWithException(() -> {
             System.out.println("StreamObserverDelegate Done!");
-            throw new BizException("0001");
+            throw new BizException(errorCode);
         });
-        super.doTest(request, responseObserver);
     }
 }

@@ -1,13 +1,11 @@
 package com.masaiqi;
 
-import com.google.protobuf.Empty;
-import com.masaiqi.grpc.ErrorInfo;
 import com.masaiqi.grpc.Test;
 import com.masaiqi.grpc.TestServantGrpc;
-import io.grpc.*;
+import io.grpc.BindableService;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.ServerInterceptor;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
-import io.grpc.protobuf.ProtoUtils;
-import io.grpc.stub.StreamObserver;
 
 import java.io.IOException;
 import java.util.List;
@@ -44,32 +42,9 @@ public class BaseTemplate {
         }
     }
 
-    public void testResponse() {
+    public void testResponse(io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
         var channel = ManagedChannelBuilder.forAddress("127.0.0.1", port).usePlaintext().build();
-        TestServantGrpc.newStub(channel).doTest(Test.getDefaultInstance(), new StreamObserver<Empty>() {
-            @Override
-            public void onNext(Empty value) {
-                System.out.println("onNext");
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                System.out.println("onError");
-                if (t instanceof StatusRuntimeException) {
-                    StatusRuntimeException exception = StatusRuntimeException.class.cast(t);
-                    Status status = exception.getStatus();
-                    if (status.getCode() == Status.UNKNOWN.getCode()) {
-                        ErrorInfo errorInfo = exception.getTrailers().get(ProtoUtils.keyForProto(ErrorInfo.getDefaultInstance()));
-                        System.out.println("Got Error Code:" + errorInfo.toString());
-                    }
-                }
-            }
-
-            @Override
-            public void onCompleted() {
-                System.out.println("onCompleted");
-            }
-        });
+        TestServantGrpc.newStub(channel).doTest(Test.getDefaultInstance(), responseObserver);
 
     }
 }

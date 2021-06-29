@@ -1,9 +1,7 @@
 package com.masaiqi.server;
 
 import com.google.protobuf.Message;
-import com.masaiqi.exception.handler.BizExceptionHandler;
-import com.masaiqi.exception.handler.GenericThrowableHandler;
-import com.masaiqi.exception.handler.ThrowableChain;
+import com.masaiqi.exception.strategy.ExceptionHandleStrategyFactory;
 import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,38 +25,44 @@ public class StreamObserverDelegate<ReqT extends Message, RespT extends Message>
 
     private StreamObserver<RespT> originResponseObserver;
 
-    private ThrowableChain throwableChain;
+    private Boolean isCompleted;
 
     public StreamObserverDelegate(StreamObserver<RespT> originResponseObserver) {
         if (originResponseObserver == null) {
             logger.error("originResponseObserver must not null!");
         }
         this.originResponseObserver = originResponseObserver;
-        initThrowableChain();
-    }
-
-    private void initThrowableChain() {
-        this.throwableChain = new ThrowableChain();
-        this.throwableChain.addHandler(new BizExceptionHandler());
-        this.throwableChain.addHandler(new GenericThrowableHandler());
+        this.isCompleted = false;
     }
 
     @Override
     public void onNext(RespT value) {
-        if (this.originResponseObserver != null) {
+        if (!this.isCompleted && this.originResponseObserver != null) {
             this.originResponseObserver.onNext(value);
+            this.isCompleted = true;
         }
     }
 
     @Override
     public void onError(Throwable t) {
-        throwableChain.handle(t, originResponseObserver);
+        if (this.isCompleted) {
+            return;
+        }
+        this.isCompleted = true;
+
+        if (t instanceof Exception) {
+            Exception exception = Exception.class.cast(t);
+            ExceptionHandleStrategyFactory.getStrategy(exception).handleException(exception, this.originResponseObserver);
+        } else {
+            logger.info("gRPC Servant Error:{}", t.toString());
+        }
     }
 
     @Override
     public void onCompleted() {
-        if (originResponseObserver != null) {
+        if (!this.isCompleted && originResponseObserver != null) {
             originResponseObserver.onCompleted();
+            this.isCompleted = true;
         }
     }
 
